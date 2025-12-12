@@ -24,7 +24,7 @@ function init() {
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.0;
     renderer.outputEncoding = THREE.sRGBEncoding;
-    renderer.physicallyCorrectLights = true; // Key for AAA lighting
+    renderer.physicallyCorrectLights = true;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
 
     // Controls
