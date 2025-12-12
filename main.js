@@ -330,79 +330,109 @@ function createFieldMarkings() {
 }
 
 // ==========================================
-// GOALS
+// GOALS (Realistic with full net cage)
 // ==========================================
 function createGoals() {
     const goalW = 7.32, goalH = 2.44, goalD = 2.5;
-    const postR = 0.06;
+    const postR = 0.08;
 
     const postMat = new THREE.MeshStandardMaterial({
         color: 0xffffff,
-        metalness: 0.8,
-        roughness: 0.2
+        metalness: 0.3,
+        roughness: 0.4
     });
     const netMat = new THREE.MeshBasicMaterial({
-        color: 0xeeeeee,
+        color: 0xffffff,
         wireframe: true,
         transparent: true,
-        opacity: 0.5
+        opacity: 0.6,
+        side: THREE.DoubleSide
     });
 
     function createGoal(xPos) {
         const goal = new THREE.Group();
         const dir = xPos > 0 ? 1 : -1;
 
-        // Posts
+        // === FRAME ===
+        // Front posts (left and right)
         const postGeo = new THREE.CylinderGeometry(postR, postR, goalH, 12);
-        [1, -1].forEach(s => {
-            const post = new THREE.Mesh(postGeo, postMat);
-            post.position.set(0, goalH / 2, s * goalW / 2);
-            post.castShadow = true;
-            goal.add(post);
-        });
+
+        const postLeft = new THREE.Mesh(postGeo, postMat);
+        postLeft.position.set(0, goalH / 2, -goalW / 2);
+        postLeft.castShadow = true;
+        goal.add(postLeft);
+
+        const postRight = new THREE.Mesh(postGeo, postMat);
+        postRight.position.set(0, goalH / 2, goalW / 2);
+        postRight.castShadow = true;
+        goal.add(postRight);
 
         // Crossbar
-        const crossGeo = new THREE.CylinderGeometry(postR, postR, goalW, 12);
-        const cross = new THREE.Mesh(crossGeo, postMat);
-        cross.rotation.x = Math.PI / 2;
-        cross.position.set(0, goalH, 0);
-        cross.castShadow = true;
-        goal.add(cross);
+        const crossGeo = new THREE.CylinderGeometry(postR, postR, goalW + postR * 2, 12);
+        const crossbar = new THREE.Mesh(crossGeo, postMat);
+        crossbar.rotation.x = Math.PI / 2;
+        crossbar.position.set(0, goalH, 0);
+        crossbar.castShadow = true;
+        goal.add(crossbar);
 
-        // Net back
+        // Back support posts
+        const backPostLeft = new THREE.Mesh(postGeo, postMat);
+        backPostLeft.position.set(dir * goalD, goalH / 2, -goalW / 2);
+        goal.add(backPostLeft);
+
+        const backPostRight = new THREE.Mesh(postGeo, postMat);
+        backPostRight.position.set(dir * goalD, goalH / 2, goalW / 2);
+        goal.add(backPostRight);
+
+        // Back crossbar
+        const backCrossbar = new THREE.Mesh(crossGeo, postMat);
+        backCrossbar.rotation.x = Math.PI / 2;
+        backCrossbar.position.set(dir * goalD, goalH, 0);
+        goal.add(backCrossbar);
+
+        // === NETS ===
+        // Back net (vertical)
         const backNet = new THREE.Mesh(
-            new THREE.PlaneGeometry(goalW, goalH, 25, 10),
+            new THREE.PlaneGeometry(goalW, goalH, 20, 12),
             netMat
         );
         backNet.position.set(dir * goalD, goalH / 2, 0);
         backNet.rotation.y = Math.PI / 2;
         goal.add(backNet);
 
-        // Net top
+        // Top net (horizontal)
         const topNet = new THREE.Mesh(
-            new THREE.PlaneGeometry(goalW, goalD, 25, 8),
+            new THREE.PlaneGeometry(goalD, goalW, 8, 20),
             netMat
         );
         topNet.position.set(dir * goalD / 2, goalH, 0);
         topNet.rotation.x = Math.PI / 2;
         goal.add(topNet);
 
-        // Net sides
-        [1, -1].forEach(s => {
-            const sideNet = new THREE.Mesh(
-                new THREE.PlaneGeometry(goalD, goalH, 8, 10),
-                netMat
-            );
-            sideNet.position.set(dir * goalD / 2, goalH / 2, s * goalW / 2);
-            goal.add(sideNet);
-        });
+        // Side nets (left and right triangular panels)
+        const sideNetGeo = new THREE.PlaneGeometry(goalD, goalH, 8, 12);
+
+        const sideNetLeft = new THREE.Mesh(sideNetGeo, netMat);
+        sideNetLeft.position.set(dir * goalD / 2, goalH / 2, -goalW / 2);
+        goal.add(sideNetLeft);
+
+        const sideNetRight = new THREE.Mesh(sideNetGeo, netMat);
+        sideNetRight.position.set(dir * goalD / 2, goalH / 2, goalW / 2);
+        goal.add(sideNetRight);
+
+        // Bottom bar (ground level, back)
+        const bottomBarGeo = new THREE.CylinderGeometry(postR * 0.5, postR * 0.5, goalW, 8);
+        const bottomBar = new THREE.Mesh(bottomBarGeo, postMat);
+        bottomBar.rotation.x = Math.PI / 2;
+        bottomBar.position.set(dir * goalD, postR, 0);
+        goal.add(bottomBar);
 
         goal.position.x = xPos;
         return goal;
     }
 
-    scene.add(createGoal(FIELD_LENGTH / 2 + 0.5));
-    scene.add(createGoal(-FIELD_LENGTH / 2 - 0.5));
+    scene.add(createGoal(FIELD_LENGTH / 2));
+    scene.add(createGoal(-FIELD_LENGTH / 2));
 }
 
 // ==========================================
@@ -501,41 +531,48 @@ function createStadiumStructure() {
     const matSeatWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
     const matSeatDarkRed = new THREE.MeshStandardMaterial({ color: 0x990000, roughness: 0.6 });
 
-    // --- Helper for Single Tier with Seat Patterns ---
+    // --- Helper for Single Tier (Performance Optimized - Simplified Rows) ---
     function createTier(width, depth, rows, yStart, zStart, pattern = null) {
         const g = new THREE.Group();
         const rowDepth = depth / rows;
-        const rowHeight = 0.6; // Steeper for better visibility
+        const rowHeight = 0.6;
 
         for (let r = 0; r < rows; r++) {
             const y = yStart + r * rowHeight;
             const z = zStart + r * rowDepth;
 
-            // Concrete step
-            const step = new THREE.Mesh(new THREE.BoxGeometry(width, rowHeight, rowDepth), matConcrete);
+            // Concrete step - single mesh per row
+            const step = new THREE.Mesh(
+                new THREE.BoxGeometry(width, rowHeight, rowDepth),
+                matConcrete
+            );
             step.position.set(0, y + rowHeight / 2, z + rowDepth / 2);
             step.receiveShadow = true;
             step.castShadow = true;
             g.add(step);
 
-            // Seats with pattern support
-            const numSeats = Math.floor(width / 0.8);
-            const seatWidth = width / numSeats;
-            for (let s = 0; s < numSeats; s++) {
+            // Seats - use SEGMENTS instead of individual seats for performance
+            // Create 8 seat sections per row instead of 100+
+            const numSections = 8;
+            const sectionWidth = width / numSections;
+
+            for (let s = 0; s < numSections; s++) {
                 let seatMat = matSeatRed;
+
                 // Create text-like patterns
                 if (pattern === 'MANCHESTER') {
-                    // Alternating pattern for visual effect
-                    if ((r + s) % 7 === 0 || (r + s) % 11 === 0) seatMat = matSeatWhite;
+                    if ((r + s) % 4 === 0) seatMat = matSeatWhite;
                 } else if (pattern === 'UNITED') {
-                    if ((r + s) % 5 === 0 || (r + s) % 9 === 0) seatMat = matSeatWhite;
+                    if ((r + s) % 3 === 0) seatMat = matSeatWhite;
                 } else {
-                    // Default: mostly red with occasional variation
-                    if (Math.random() > 0.92) seatMat = matSeatDarkRed;
+                    if ((r + s) % 6 === 0) seatMat = matSeatDarkRed;
                 }
 
-                const seat = new THREE.Mesh(new THREE.BoxGeometry(seatWidth * 0.85, 0.15, rowDepth * 0.5), seatMat);
-                const xPos = -width / 2 + seatWidth / 2 + s * seatWidth;
+                const seat = new THREE.Mesh(
+                    new THREE.BoxGeometry(sectionWidth * 0.95, 0.15, rowDepth * 0.5),
+                    seatMat
+                );
+                const xPos = -width / 2 + sectionWidth / 2 + s * sectionWidth;
                 seat.position.set(xPos, y + rowHeight + 0.08, z + rowDepth / 2);
                 g.add(seat);
             }
