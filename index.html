@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Football Stadium - Three.js</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="container">
+        <!-- Instructions overlay -->
+        <div id="blocker">
+            <div id="instructions">
+                <h1>🏟️ 3D Football Stadium</h1>
+                <p class="subtitle">Interactive Walking Experience</p>
+
+                <div class="mode-selector">
+                    <button id="btn-orbit-mode" class="mode-btn active">
+                        <span class="icon">🎥</span>
+                        <span class="label">Orbit Mode</span>
+                        <span class="desc">Lihat stadion dari luar</span>
+                    </button>
+                    <button id="btn-walk-mode" class="mode-btn">
+                        <span class="icon">🚶</span>
+                        <span class="label">Walk Mode</span>
+                        <span class="desc">Jalan di dalam stadion</span>
+                    </button>
+                </div>
+
+                <div id="walk-instructions" class="hidden">
+                    <h3>Kontrol Berjalan:</h3>
+                    <div class="controls-grid">
+                        <div class="control-item">
+                            <kbd>W</kbd><span>Maju</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>S</kbd><span>Mundur</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>A</kbd><span>Kiri</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>D</kbd><span>Kanan</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>SHIFT</kbd><span>Lari</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>SPACE</kbd><span>Lompat</span>
+                        </div>
+                        <div class="control-item">
+                            <kbd>ESC</kbd><span>Pause</span>
+                        </div>
+                    </div>
+                    <p class="click-info">Klik untuk mulai berjalan</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- HUD during walk mode -->
+        <div id="hud" class="hidden">
+            <div class="hud-item">
+                <span class="hud-label">Position</span>
+                <span id="hud-position">X: 0 | Z: 0</span>
+            </div>
+            <div class="hud-item">
+                <span class="hud-label">Mode</span>
+                <span id="hud-mode">Walking</span>
+            </div>
+            <div class="hud-hint">Tekan ESC untuk menu</div>
+        </div>
+
+        <!-- Minimap -->
+        <div id="minimap" class="hidden">
+            <canvas id="minimap-canvas" width="150" height="100"></canvas>
+            <div id="player-dot"></div>
+        </div>
+
+        <div id="canvas-container"></div>
+
+        <!-- Bottom controls for orbit mode -->
+        <div id="controls">
+            <button id="btn-top-view" class="control-btn">🔝 Top View</button>
+            <button id="btn-side-view" class="control-btn">👁️ Side View</button>
+            <button id="btn-goal-view" class="control-btn">⚽ Goal View</button>
+            <button id="btn-reset" class="control-btn primary">🔄 Reset</button>
+        </div>
+    </div>
+
+    <!-- Three.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/PointerLockControls.js"></script>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
