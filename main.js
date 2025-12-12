@@ -21,10 +21,10 @@ const FIELD_WIDTH = 68;
 
 // Initialize
 function init() {
-    // Scene with better background
+    // Scene with overcast atmosphere
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x87CEEB);
-    scene.fog = new THREE.FogExp2(0x87CEEB, 0.0025); // AAA Fog Effect
+    scene.background = new THREE.Color(0x8899aa); // Overcast grey
+    scene.fog = new THREE.FogExp2(0x8899aa, 0.002); // Light atmospheric fog
 
     // Camera
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -78,65 +78,75 @@ function init() {
 // ADVANCED LIGHTING
 // ==========================================
 function setupAdvancedLighting() {
-    // 1. Hemisphere Light (Sky vs Ground) - subtle base
-    const hemi = new THREE.HemisphereLight(0xddeeff, 0x111111, 0.6);
+    // === REALISTIC OLD TRAFFORD LIGHTING (Overcast Match Day) ===
+
+    // 1. Hemisphere Light - Overcast sky (muted blue-grey)
+    const hemi = new THREE.HemisphereLight(0x7799aa, 0x445544, 0.6);
     hemi.position.set(0, 500, 0);
     scene.add(hemi);
 
-    // 2. Main Sun - Warm, High Intensity, Sharp Shadows
-    const sun = new THREE.DirectionalLight(0xfffaed, 3.5);
-    sun.position.set(100, 150, 50);
+    // 2. Main Directional Light - Soft diffused daylight (overcast)
+    const sun = new THREE.DirectionalLight(0xcccccc, 0.8);
+    sun.position.set(-50, 100, 50);
     sun.castShadow = true;
 
-    // High-res shadows for AAA look
+    // High quality soft shadows
     sun.shadow.mapSize.width = 4096;
     sun.shadow.mapSize.height = 4096;
     sun.shadow.camera.near = 10;
-    sun.shadow.camera.far = 500;
+    sun.shadow.camera.far = 400;
     sun.shadow.camera.left = -150;
     sun.shadow.camera.right = 150;
     sun.shadow.camera.top = 150;
     sun.shadow.camera.bottom = -150;
-    sun.shadow.bias = -0.00005;
-    sun.shadow.normalBias = 0.02; // Reduces shadow acne
+    sun.shadow.bias = -0.0001;
+    sun.shadow.normalBias = 0.02;
     scene.add(sun);
 
-    // 3. Ambient - Fill shadows very slightly
-    const ambient = new THREE.AmbientLight(0x404040, 0.5);
+    // 3. Ambient - Low fill to maintain shadows
+    const ambient = new THREE.AmbientLight(0x333344, 0.3);
     scene.add(ambient);
 
-    // 4. Floodlights (Visuals & Spotlights)
+    // 4. Stadium Floodlights - Focused on pitch, natural intensity
     const floodPositions = [
-        { x: 80, y: 60, z: 60, tx: 0, tz: 0 },
-        { x: -80, y: 60, z: 60, tx: 0, tz: 0 },
-        { x: 80, y: 60, z: -60, tx: 0, tz: 0 },
-        { x: -80, y: 60, z: -60, tx: 0, tz: 0 },
+        // Behind each goal
+        { x: 60, y: 50, z: 0, tx: 0, tz: 0 },
+        { x: -60, y: 50, z: 0, tx: 0, tz: 0 },
+        // North stand edge
+        { x: -35, y: 48, z: -52, tx: 0, tz: 0 },
+        { x: 35, y: 48, z: -52, tx: 0, tz: 0 },
+        // South stand edge
+        { x: -35, y: 45, z: 47, tx: 0, tz: 0 },
+        { x: 35, y: 45, z: 47, tx: 0, tz: 0 },
     ];
 
-    floodPositions.forEach(pos => {
-        // Light
-        const spot = new THREE.SpotLight(0xffffff, 1500); // High intensity for phy-lights
+    floodPositions.forEach((pos, index) => {
+        // Stadium floodlight - white, controlled intensity
+        const spot = new THREE.SpotLight(0xffffff, 800);
         spot.position.set(pos.x, pos.y, pos.z);
         spot.target.position.set(pos.tx, 0, pos.tz);
-        spot.angle = Math.PI / 6;
+        spot.angle = Math.PI / 3;
         spot.penumbra = 0.5;
-        spot.decay = 2; // Physical decay
-        spot.distance = 400;
-        spot.castShadow = true; // Multiple shadow casters = AAA
+        spot.decay = 2;
+        spot.distance = 150;
+        spot.castShadow = index < 2;
         spot.shadow.mapSize.width = 1024;
         spot.shadow.mapSize.height = 1024;
-        spot.shadow.bias = -0.0001;
         scene.add(spot);
         scene.add(spot.target);
 
-        // Visual "Bulb"
-        const bulb = new THREE.Mesh(
-            new THREE.SphereGeometry(1, 16, 16),
-            new THREE.MeshBasicMaterial({ color: 0xffffff })
-        );
-        bulb.position.set(pos.x, pos.y, pos.z);
-        scene.add(bulb);
+        // Visible floodlight fixture (small)
+        const fixtureMat = new THREE.MeshBasicMaterial({ color: 0xffffee });
+        const fixture = new THREE.Mesh(new THREE.BoxGeometry(3, 1, 3), fixtureMat);
+        fixture.position.set(pos.x, pos.y + 1, pos.z);
+        scene.add(fixture);
     });
+
+    // 5. Pitch illumination (subtle warm fill from above)
+    const pitchLight = new THREE.RectAreaLight(0xffffee, 2, 100, 65);
+    pitchLight.position.set(0, 60, 0);
+    pitchLight.rotation.x = -Math.PI / 2;
+    scene.add(pitchLight);
 }
 
 // ==========================================
@@ -156,12 +166,12 @@ function createEnvironment() {
     ground.receiveShadow = true;
     scene.add(ground);
 
-    // Sky gradient dome
+    // Sky gradient dome (Overcast cloudy day)
     const skyGeo = new THREE.SphereGeometry(450, 32, 32);
     const skyMat = new THREE.ShaderMaterial({
         uniforms: {
-            topColor: { value: new THREE.Color(0x0077ff) },
-            bottomColor: { value: new THREE.Color(0x89cff0) },
+            topColor: { value: new THREE.Color(0x6688aa) }, // Grey-blue clouds
+            bottomColor: { value: new THREE.Color(0x99aabb) }, // Light grey horizon
             offset: { value: 20 },
             exponent: { value: 0.6 }
         },
@@ -521,27 +531,124 @@ function createStadiumStructure() {
     const distW = 105 / 2 + 4; // X location for West Stand front
     const distE = 105 / 2 + 4; // X location for East Stand front
 
-    // Materials - Old Trafford Colors
-    const matConcrete = new THREE.MeshStandardMaterial({ color: 0xb0b0b0, roughness: 0.85 });
-    const matBrick = new THREE.MeshStandardMaterial({ color: 0x8B4513, roughness: 0.9 }); // Brick exterior
-    const matRedWall = new THREE.MeshStandardMaterial({ color: 0x8B0000, roughness: 0.7 }); // Dark red
-    const matRoof = new THREE.MeshStandardMaterial({ color: 0xd0d0d0, roughness: 0.3, metalness: 0.2, side: THREE.DoubleSide });
-    const matTruss = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.2, metalness: 0.5 }); // White steel
-    const matSeatRed = new THREE.MeshStandardMaterial({ color: 0xcc0000, roughness: 0.6 });
-    const matSeatWhite = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.6 });
-    const matSeatDarkRed = new THREE.MeshStandardMaterial({ color: 0x990000, roughness: 0.6 });
+    // === REALISTIC MATERIALS (PBR Properties) ===
 
-    // --- Helper for Single Tier (Performance Optimized - Simplified Rows) ---
-    function createTier(width, depth, rows, yStart, zStart, pattern = null) {
+    // Concrete - rough, slightly reflective
+    const matConcrete = new THREE.MeshStandardMaterial({
+        color: 0x909090,
+        roughness: 0.95,
+        metalness: 0.0
+    });
+
+    // Brick exterior - textured appearance (Old Trafford red brick)
+    const matBrick = new THREE.MeshStandardMaterial({
+        color: 0x8B3A3A, // Darker red-brown brick
+        roughness: 0.85,
+        metalness: 0.0
+    });
+
+    // Dark red accent walls
+    const matRedWall = new THREE.MeshStandardMaterial({
+        color: 0x6B0000, // Deep Manchester United red
+        roughness: 0.6,
+        metalness: 0.0
+    });
+
+    // Roof - light grey metal panels
+    const matRoof = new THREE.MeshStandardMaterial({
+        color: 0xb8b8b8,
+        roughness: 0.4,
+        metalness: 0.6,
+        side: THREE.DoubleSide
+    });
+
+    // Steel trusses - white painted steel
+    const matTruss = new THREE.MeshStandardMaterial({
+        color: 0xe8e8e8,
+        roughness: 0.3,
+        metalness: 0.7
+    });
+
+    // Seats - glossy plastic (Old Trafford red)
+    const matSeatRed = new THREE.MeshStandardMaterial({
+        color: 0xc41e3a, // True Old Trafford red
+        roughness: 0.4,
+        metalness: 0.0
+    });
+    const matSeatWhite = new THREE.MeshStandardMaterial({
+        color: 0xf5f5f5,
+        roughness: 0.4,
+        metalness: 0.0
+    });
+    const matSeatDarkRed = new THREE.MeshStandardMaterial({
+        color: 0x8b0000,
+        roughness: 0.4,
+        metalness: 0.0
+    });
+
+    // --- Helper for Single Tier (with text pattern support) ---
+    function createTier(width, depth, rows, yStart, zStart, pattern = null, mirrorText = false) {
         const g = new THREE.Group();
         const rowDepth = depth / rows;
         const rowHeight = 0.6;
+
+        // Letter patterns (5 rows x 3 cols per letter) - 1 = white, 0 = red
+        const letters = {
+            'M': [[1, 0, 1], [1, 1, 1], [1, 0, 1], [1, 0, 1], [1, 0, 1]],
+            'A': [[0, 1, 0], [1, 0, 1], [1, 1, 1], [1, 0, 1], [1, 0, 1]],
+            'N': [[1, 0, 1], [1, 1, 1], [1, 1, 1], [1, 0, 1], [1, 0, 1]],
+            'C': [[1, 1, 1], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 1, 1]],
+            'H': [[1, 0, 1], [1, 0, 1], [1, 1, 1], [1, 0, 1], [1, 0, 1]],
+            'E': [[1, 1, 1], [1, 0, 0], [1, 1, 0], [1, 0, 0], [1, 1, 1]],
+            'S': [[1, 1, 1], [1, 0, 0], [1, 1, 1], [0, 0, 1], [1, 1, 1]],
+            'T': [[1, 1, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0], [0, 1, 0]],
+            'R': [[1, 1, 0], [1, 0, 1], [1, 1, 0], [1, 0, 1], [1, 0, 1]],
+            'U': [[1, 0, 1], [1, 0, 1], [1, 0, 1], [1, 0, 1], [1, 1, 1]],
+            'I': [[1, 1, 1], [0, 1, 0], [0, 1, 0], [0, 1, 0], [1, 1, 1]],
+            'D': [[1, 1, 0], [1, 0, 1], [1, 0, 1], [1, 0, 1], [1, 1, 0]],
+            'F': [[1, 1, 1], [1, 0, 0], [1, 1, 0], [1, 0, 0], [1, 0, 0]],
+            'O': [[1, 1, 1], [1, 0, 1], [1, 0, 1], [1, 0, 1], [1, 1, 1]],
+            ' ': [[0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0], [0, 0, 0]]
+        };
+
+        // Generate text bitmap
+        function getTextBitmap(text, totalCols) {
+            const letterWidth = 4; // 3 cols + 1 space
+            const textWidth = text.length * letterWidth;
+            const startCol = Math.floor((totalCols - textWidth) / 2);
+
+            const bitmap = [];
+            for (let row = 0; row < 5; row++) {
+                bitmap[row] = [];
+                for (let col = 0; col < totalCols; col++) {
+                    const letterIdx = Math.floor((col - startCol) / letterWidth);
+                    const colInLetter = (col - startCol) % letterWidth;
+
+                    if (letterIdx >= 0 && letterIdx < text.length && colInLetter < 3) {
+                        const letter = letters[text[letterIdx]] || letters[' '];
+                        bitmap[row][col] = letter[row] ? letter[row][colInLetter] : 0;
+                    } else {
+                        bitmap[row][col] = 0;
+                    }
+                }
+            }
+            return bitmap;
+        }
+
+        const numSections = 48; // Sections for text detail
+        const sectionWidth = width / numSections;
+
+        // Pre-generate text bitmaps for any pattern
+        let textBitmap = null;
+        if (pattern) {
+            textBitmap = getTextBitmap(pattern, numSections);
+        }
 
         for (let r = 0; r < rows; r++) {
             const y = yStart + r * rowHeight;
             const z = zStart + r * rowDepth;
 
-            // Concrete step - single mesh per row
+            // Concrete step
             const step = new THREE.Mesh(
                 new THREE.BoxGeometry(width, rowHeight, rowDepth),
                 matConcrete
@@ -551,29 +658,30 @@ function createStadiumStructure() {
             step.castShadow = true;
             g.add(step);
 
-            // Seats - use SEGMENTS instead of individual seats for performance
-            // Create 8 seat sections per row instead of 100+
-            const numSections = 8;
-            const sectionWidth = width / numSections;
-
+            // Seats with text pattern
             for (let s = 0; s < numSections; s++) {
                 let seatMat = matSeatRed;
 
-                // Create text-like patterns
-                if (pattern === 'MANCHESTER') {
-                    if ((r + s) % 4 === 0) seatMat = matSeatWhite;
-                } else if (pattern === 'UNITED') {
-                    if ((r + s) % 3 === 0) seatMat = matSeatWhite;
-                } else {
-                    if ((r + s) % 6 === 0) seatMat = matSeatDarkRed;
+                if (textBitmap && rows >= 5) {
+                    // Map row to text row (centered in tier)
+                    const textRowStart = Math.floor((rows - 5) / 2);
+                    const textRow = r - textRowStart;
+                    // Flip both horizontal (columns) and vertical (rows) for 180° rotation
+                    const flippedCol = numSections - 1 - s;  // Flip horizontal
+                    const flippedRow = 4 - textRow;          // Flip vertical (5 rows: 0→4, 1→3, etc)
+                    if (textRow >= 0 && textRow < 5) {
+                        if (textBitmap[flippedRow] && textBitmap[flippedRow][flippedCol] === 1) {
+                            seatMat = matSeatWhite;
+                        }
+                    }
                 }
 
                 const seat = new THREE.Mesh(
-                    new THREE.BoxGeometry(sectionWidth * 0.95, 0.15, rowDepth * 0.5),
+                    new THREE.BoxGeometry(sectionWidth * 0.92, 0.12, rowDepth * 0.45),
                     seatMat
                 );
                 const xPos = -width / 2 + sectionWidth / 2 + s * sectionWidth;
-                seat.position.set(xPos, y + rowHeight + 0.08, z + rowDepth / 2);
+                seat.position.set(xPos, y + rowHeight + 0.06, z + rowDepth / 2);
                 g.add(seat);
             }
         }
@@ -582,7 +690,8 @@ function createStadiumStructure() {
     }
 
     // --- Stand Builder with Old Trafford Details ---
-    function createStand(width, tiersConfig, standType, pattern = null) {
+    // tiersConfig: array of { rows, depth, pattern? } objects
+    function createStand(width, tiersConfig, standType, mirrorText = false) {
         const group = new THREE.Group();
 
         let currentY = 0;
@@ -597,16 +706,22 @@ function createStadiumStructure() {
                 walk.receiveShadow = true;
                 group.add(walk);
 
-                // Safety barrier
-                const barrier = new THREE.Mesh(new THREE.BoxGeometry(width, 1.2, 0.2), matRedWall);
-                barrier.position.set(0, currentY + 1.1, currentZ + 0.1);
+                // Safety barrier (moved forward to prevent z-fighting)
+                const barrierMat = matRedWall.clone();
+                barrierMat.polygonOffset = true;
+                barrierMat.polygonOffsetFactor = -1;
+                barrierMat.polygonOffsetUnits = -1;
+                const barrier = new THREE.Mesh(new THREE.BoxGeometry(width, 1.2, 0.3), barrierMat);
+                barrier.position.set(0, currentY + 1.1, currentZ - 0.2); // Moved forward
                 group.add(barrier);
 
                 currentZ += walkDepth;
                 currentY += 1;
             }
 
-            const t = createTier(width, tier.depth, tier.rows, currentY, currentZ, pattern);
+            // Each tier can have its own pattern
+            const tierPattern = tier.pattern || null;
+            const t = createTier(width, tier.depth, tier.rows, currentY, currentZ, tierPattern, mirrorText);
             group.add(t.mesh);
             currentY = t.endY;
             currentZ = t.endZ;
@@ -638,13 +753,27 @@ function createStadiumStructure() {
         const roofOverhang = 15;
         const roofY = totalHeight + 12;
 
-        // Main roof panel
+        // Main roof panel (exterior - light)
         const roofGeo = new THREE.BoxGeometry(width + 6, 0.8, totalDepth + roofOverhang);
         const roof = new THREE.Mesh(roofGeo, matRoof);
         roof.position.set(0, roofY, (totalDepth + roofOverhang) / 2 - roofOverhang + 5);
         roof.castShadow = true;
         roof.receiveShadow = true;
         group.add(roof);
+
+        // Roof underside (interior - dark steel)
+        const roofUndersideMat = new THREE.MeshStandardMaterial({
+            color: 0x2a2a2a,
+            roughness: 0.6,
+            metalness: 0.4
+        });
+        const roofUnderside = new THREE.Mesh(
+            new THREE.PlaneGeometry(width + 4, totalDepth + roofOverhang - 2),
+            roofUndersideMat
+        );
+        roofUnderside.rotation.x = Math.PI / 2;
+        roofUnderside.position.set(0, roofY - 0.5, (totalDepth + roofOverhang) / 2 - roofOverhang + 5);
+        group.add(roofUnderside);
 
         // === Old Trafford Style Roof Trusses ===
         const numTruss = standType === 'north' ? 8 : 6;
@@ -689,85 +818,272 @@ function createStadiumStructure() {
 
     // --- Create 4 Stands (Old Trafford Layout) ---
 
-    // 1. NORTH (Sir Alex Ferguson Stand) - Tallest, 3 Tiers, "MANCHESTER" pattern
+    // 1. NORTH (Sir Alex Ferguson Stand) - Tallest, 3 Tiers
+    // "MANCHESTER" on top tier, "UNITED" on bottom tier (stacked like real Old Trafford)
+    // mirrorText=false because rotation already flips the view
     const north = createStand(FIELD_LENGTH + 15, [
-        { rows: 18, depth: 18 },
-        { rows: 10, depth: 10 },
-        { rows: 18, depth: 20 }
-    ], 'north', 'MANCHESTER');
+        { rows: 12, depth: 12, pattern: 'UNITED' },      // Bottom tier - UNITED
+        { rows: 8, depth: 8 },                            // Middle tier - plain
+        { rows: 14, depth: 16, pattern: 'MANCHESTER' }   // Top tier - MANCHESTER
+    ], 'north', false);
     north.mesh.rotation.y = Math.PI;
     north.mesh.position.set(0, 0, -distN - 5);
     stadium.add(north.mesh);
 
-    // 2. SOUTH (Bobby Charlton Stand) - 2 Tiers, "UNITED" pattern
+    // 2. SOUTH (Bobby Charlton Stand) - 2 Tiers, plain red
     const south = createStand(FIELD_LENGTH + 15, [
         { rows: 15, depth: 15 },
         { rows: 12, depth: 14 }
-    ], 'south', 'UNITED');
+    ], 'south', false);
     south.mesh.rotation.y = 0;
     south.mesh.position.set(0, 0, distS + 5);
     stadium.add(south.mesh);
 
     // 3. WEST (Stretford End) - 2 Tiers
+    // First tier = lower (bottom), Second tier = upper (top)
+    // STRETFORD should be on TOP, END on BOTTOM when viewed from pitch
     const west = createStand(FIELD_WIDTH + 15, [
-        { rows: 14, depth: 14 },
-        { rows: 14, depth: 16 }
-    ], 'west');
+        { rows: 14, depth: 16, pattern: 'END' },         // Lower tier - END (bottom)
+        { rows: 12, depth: 14, pattern: 'STRETFORD' }    // Upper tier - STRETFORD (top)
+    ], 'west', false);
     west.mesh.rotation.y = -Math.PI / 2;
     west.mesh.position.set(-distW - 5, 0, 0);
     stadium.add(west.mesh);
 
-    // 4. EAST (Scoreboard End) - 2 Tiers
+    // 4. EAST (Scoreboard End) - 2 Tiers, plain red
     const east = createStand(FIELD_WIDTH + 15, [
         { rows: 14, depth: 14 },
         { rows: 14, depth: 16 }
-    ], 'east');
+    ], 'east', false);
     east.mesh.rotation.y = Math.PI / 2;
     east.mesh.position.set(distE + 5, 0, 0);
     stadium.add(east.mesh);
 
-    // --- Corner Towers (Old Trafford Style - Simple Rectangular) ---
-    function createCornerTower(xPos, zPos) {
-        const tower = new THREE.Group();
-        const towerH = 35;
-        const towerW = 12;
+    // === OLD TRAFFORD EXTERIOR DETAILS ===
 
-        // Main tower body - brick
+    // --- Staircase Towers (Tall rectangular towers at corners) ---
+    function createStaircaseTower(xPos, zPos, height = 45) {
+        const tower = new THREE.Group();
+        const towerW = 8;
+        const towerD = 8;
+
+        // Main tower body - grey concrete
+        const bodyMat = new THREE.MeshStandardMaterial({
+            color: 0x707070, roughness: 0.8, metalness: 0.1
+        });
         const body = new THREE.Mesh(
-            new THREE.BoxGeometry(towerW, towerH, towerW),
-            matBrick
+            new THREE.BoxGeometry(towerW, height, towerD),
+            bodyMat
         );
-        body.position.y = towerH / 2;
+        body.position.y = height / 2;
         body.castShadow = true;
         body.receiveShadow = true;
         tower.add(body);
 
-        // Red accent strip
-        const accent = new THREE.Mesh(
-            new THREE.BoxGeometry(towerW + 0.5, 3, towerW + 0.5),
-            matRedWall
-        );
-        accent.position.y = towerH - 5;
-        tower.add(accent);
+        // Red accent panels on sides
+        const redPanelMat = new THREE.MeshStandardMaterial({
+            color: 0xc41e3a, roughness: 0.5, metalness: 0.0
+        });
+        [-1, 1].forEach(side => {
+            const panel = new THREE.Mesh(
+                new THREE.BoxGeometry(towerW + 0.2, height - 5, 1),
+                redPanelMat
+            );
+            panel.position.set(0, height / 2, side * (towerD / 2 + 0.5));
+            tower.add(panel);
+        });
 
-        // Tower top
-        const top = new THREE.Mesh(
-            new THREE.BoxGeometry(towerW + 2, 2, towerW + 2),
+        // White vertical stripes
+        const whiteMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff, roughness: 0.4, metalness: 0.0
+        });
+        for (let i = -1; i <= 1; i += 2) {
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, height - 3, 0.5),
+                whiteMat
+            );
+            stripe.position.set(i * (towerW / 2 - 1), height / 2, 0);
+            tower.add(stripe);
+        }
+
+        // Tower top cap
+        const topCap = new THREE.Mesh(
+            new THREE.BoxGeometry(towerW + 1, 2, towerD + 1),
             matRoof
         );
-        top.position.y = towerH + 1;
-        tower.add(top);
+        topCap.position.y = height + 1;
+        tower.add(topCap);
 
         tower.position.set(xPos, 0, zPos);
         return tower;
     }
 
-    // Add 4 corner towers
-    const cornerOffset = 8;
-    stadium.add(createCornerTower(FIELD_LENGTH / 2 + cornerOffset, -FIELD_WIDTH / 2 - cornerOffset)); // NE
-    stadium.add(createCornerTower(-FIELD_LENGTH / 2 - cornerOffset, -FIELD_WIDTH / 2 - cornerOffset)); // NW
-    stadium.add(createCornerTower(-FIELD_LENGTH / 2 - cornerOffset, FIELD_WIDTH / 2 + cornerOffset)); // SW
-    stadium.add(createCornerTower(FIELD_LENGTH / 2 + cornerOffset, FIELD_WIDTH / 2 + cornerOffset)); // SE
+    // --- External Facade Panels (Red/White stripes) ---
+    function createExteriorFacade(width, height, depth, isNorth = false) {
+        const facade = new THREE.Group();
+
+        // Base grey wall
+        const greyMat = new THREE.MeshStandardMaterial({
+            color: 0x808080, roughness: 0.7, metalness: 0.1
+        });
+        const baseWall = new THREE.Mesh(
+            new THREE.BoxGeometry(width, height, depth),
+            greyMat
+        );
+        baseWall.position.y = height / 2;
+        facade.add(baseWall);
+
+        // Red horizontal bands
+        const redBandMat = new THREE.MeshStandardMaterial({
+            color: 0xb81c2d, roughness: 0.5, metalness: 0.0
+        });
+        const numBands = 4;
+        for (let i = 0; i < numBands; i++) {
+            const band = new THREE.Mesh(
+                new THREE.BoxGeometry(width + 0.2, 2, depth + 0.2),
+                redBandMat
+            );
+            band.position.y = 8 + i * 10;
+            facade.add(band);
+        }
+
+        // White vertical accent pillars
+        const pillarMat = new THREE.MeshStandardMaterial({
+            color: 0xf0f0f0, roughness: 0.4, metalness: 0.1
+        });
+        const numPillars = Math.floor(width / 20);
+        for (let i = 0; i <= numPillars; i++) {
+            const pillar = new THREE.Mesh(
+                new THREE.BoxGeometry(1.5, height + 5, 2),
+                pillarMat
+            );
+            pillar.position.set(-width / 2 + (width / numPillars) * i, height / 2, depth / 2 + 1);
+            facade.add(pillar);
+        }
+
+        return facade;
+    }
+
+    // --- Glass Entrance Section ---
+    function createGlassEntrance(width, height) {
+        const glass = new THREE.Group();
+
+        const glassMat = new THREE.MeshStandardMaterial({
+            color: 0x88ccff,
+            roughness: 0.1,
+            metalness: 0.6,
+            transparent: true,
+            opacity: 0.5
+        });
+
+        // Main glass panel
+        const panel = new THREE.Mesh(
+            new THREE.BoxGeometry(width, height, 1),
+            glassMat
+        );
+        panel.position.y = height / 2;
+        glass.add(panel);
+
+        // Steel frame
+        const frameMat = new THREE.MeshStandardMaterial({
+            color: 0x666666, roughness: 0.3, metalness: 0.8
+        });
+
+        // Vertical frames
+        [-1, 0, 1].forEach(pos => {
+            const vFrame = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, height, 0.5),
+                frameMat
+            );
+            vFrame.position.set(pos * (width / 2 - 1), height / 2, 0.5);
+            glass.add(vFrame);
+        });
+
+        // Horizontal frames
+        for (let i = 0; i <= 3; i++) {
+            const hFrame = new THREE.Mesh(
+                new THREE.BoxGeometry(width, 0.5, 0.5),
+                frameMat
+            );
+            hFrame.position.set(0, (height / 3) * i, 0.5);
+            glass.add(hFrame);
+        }
+
+        return glass;
+    }
+
+    // === PLACE EXTERIOR ELEMENTS (Simplified) ===
+
+    // Simple corner towers at 4 corners only
+    const cornerDist = 10;
+    stadium.add(createStaircaseTower(FIELD_LENGTH / 2 + cornerDist, -FIELD_WIDTH / 2 - cornerDist, 38));
+    stadium.add(createStaircaseTower(-FIELD_LENGTH / 2 - cornerDist, -FIELD_WIDTH / 2 - cornerDist, 38));
+    stadium.add(createStaircaseTower(-FIELD_LENGTH / 2 - cornerDist, FIELD_WIDTH / 2 + cornerDist, 38));
+    stadium.add(createStaircaseTower(FIELD_LENGTH / 2 + cornerDist, FIELD_WIDTH / 2 + cornerDist, 38));
+
+    // === INTERIOR DETAILS (Old Trafford Style) ===
+
+    // --- LED Advertising Boards around pitch ---
+    const adBoardMat = new THREE.MeshBasicMaterial({ color: 0x111111 }); // Dark LED panel
+    const adTextMat = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red text/accent
+    const adBoardHeight = 1.0;
+    const adBoardOffset = 3; // Distance from field edge
+
+    // North side advertising
+    const adNorth = new THREE.Mesh(
+        new THREE.BoxGeometry(FIELD_LENGTH - 10, adBoardHeight, 0.3),
+        adBoardMat
+    );
+    adNorth.position.set(0, adBoardHeight / 2, -FIELD_WIDTH / 2 - adBoardOffset);
+    stadium.add(adNorth);
+
+    // South side advertising
+    const adSouth = adNorth.clone();
+    adSouth.position.set(0, adBoardHeight / 2, FIELD_WIDTH / 2 + adBoardOffset);
+    stadium.add(adSouth);
+
+    // West & East side advertising
+    const adWest = new THREE.Mesh(
+        new THREE.BoxGeometry(0.3, adBoardHeight, FIELD_WIDTH - 10),
+        adBoardMat
+    );
+    adWest.position.set(-FIELD_LENGTH / 2 - adBoardOffset, adBoardHeight / 2, 0);
+    stadium.add(adWest);
+
+    const adEast = adWest.clone();
+    adEast.position.set(FIELD_LENGTH / 2 + adBoardOffset, adBoardHeight / 2, 0);
+    stadium.add(adEast);
+
+    // --- LED light strips on advertising boards ---
+    const ledStripMat = new THREE.MeshBasicMaterial({ color: 0xffffff, emissive: 0xffffff });
+
+    const ledNorth = new THREE.Mesh(
+        new THREE.BoxGeometry(FIELD_LENGTH - 12, 0.1, 0.1),
+        ledStripMat
+    );
+    ledNorth.position.set(0, adBoardHeight + 0.05, -FIELD_WIDTH / 2 - adBoardOffset);
+    stadium.add(ledNorth);
+
+    const ledSouth = ledNorth.clone();
+    ledSouth.position.set(0, adBoardHeight + 0.05, FIELD_WIDTH / 2 + adBoardOffset);
+    stadium.add(ledSouth);
+
+    // --- Tunnel entrance (center of one side) ---
+    const tunnelMat = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.5 });
+    const tunnel = new THREE.Mesh(
+        new THREE.BoxGeometry(8, 3, 2),
+        tunnelMat
+    );
+    tunnel.position.set(0, 1.5, FIELD_WIDTH / 2 + 5);
+    stadium.add(tunnel);
+
+    // Tunnel entrance frame (red)
+    const tunnelFrame = new THREE.Mesh(
+        new THREE.BoxGeometry(9, 3.5, 0.3),
+        matRedWall
+    );
+    tunnelFrame.position.set(0, 1.75, FIELD_WIDTH / 2 + 4);
+    stadium.add(tunnelFrame);
 
     scene.add(stadium);
 }
@@ -855,12 +1171,23 @@ function setupModeSelector() {
     const hud = document.getElementById('hud');
     const minimap = document.getElementById('minimap');
 
+    // ESC key to toggle mode selector visibility
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Escape') {
+            if (currentMode === 'orbit') {
+                // Toggle blocker visibility in orbit mode
+                blocker.classList.toggle('hidden');
+            }
+            // In walk mode, ESC naturally unlocks pointer lock
+        }
+    });
+
     orbitBtn.addEventListener('click', () => {
         orbitBtn.classList.add('active');
         walkBtn.classList.remove('active');
         walkInstr.classList.add('hidden');
         currentMode = 'orbit';
-        blocker.classList.add('hidden');
+        blocker.classList.add('hidden'); // Hide after selecting orbit
         controls.classList.remove('hidden');
         hud.classList.add('hidden');
         minimap.classList.add('hidden');
@@ -932,12 +1259,17 @@ function setupWalkingControls() {
     });
 }
 
+// Raycaster for ground detection
+const groundRaycaster = new THREE.Raycaster();
+const downDirection = new THREE.Vector3(0, -1, 0);
+let lastGroundY = 0; // For smoothing
+
 function updateWalking(delta) {
     if (currentMode !== 'walk' || !pointerLockControls.isLocked) return;
 
     velocity.x -= velocity.x * 10 * delta;
     velocity.z -= velocity.z * 10 * delta;
-    velocity.y -= 25 * delta;
+    velocity.y -= 25 * delta; // Gravity
 
     direction.z = Number(moveForward) - Number(moveBackward);
     direction.x = Number(moveRight) - Number(moveLeft);
@@ -951,24 +1283,59 @@ function updateWalking(delta) {
     pointerLockControls.moveForward(-velocity.z * delta);
     pointerLockControls.getObject().position.y += velocity.y * delta;
 
-    if (pointerLockControls.getObject().position.y < playerHeight) {
+    const pos = pointerLockControls.getObject().position;
+
+    // Raycast downward to find ground (cast from slightly above current position)
+    groundRaycaster.set(new THREE.Vector3(pos.x, pos.y + 0.5, pos.z), downDirection);
+    groundRaycaster.far = 100;
+    const intersects = groundRaycaster.intersectObjects(scene.children, true);
+
+    let groundY = 0; // Default ground level
+    if (intersects.length > 0) {
+        // Find the first solid ground (filter out thin objects like lines, nets)
+        for (let i = 0; i < intersects.length; i++) {
+            const hit = intersects[i];
+            // Skip very thin objects (wireframe, lines) and transparent objects
+            if (hit.object.material && hit.object.material.wireframe) continue;
+            if (hit.object.material && hit.object.material.transparent && hit.object.material.opacity < 0.5) continue;
+
+            if (hit.distance < 60) {
+                groundY = pos.y + 0.5 - hit.distance; // Adjust for ray start offset
+                break;
+            }
+        }
+    }
+
+    // Smooth ground height to prevent jitter (lerp towards detected ground)
+    lastGroundY = lastGroundY + (groundY - lastGroundY) * 0.3;
+
+    // Check if on ground (with small tolerance)
+    const groundLevel = lastGroundY + playerHeight;
+    if (pos.y <= groundLevel + 0.1) {
         velocity.y = 0;
-        pointerLockControls.getObject().position.y = playerHeight;
+        pos.y = groundLevel;
         canJump = true;
     }
 
-    const pos = pointerLockControls.getObject().position;
-    const bound = 100;
+    // Minimum height (don't fall through world)
+    if (pos.y < playerHeight) {
+        pos.y = playerHeight;
+        velocity.y = 0;
+        canJump = true;
+    }
+
+    // Boundary limits
+    const bound = 120;
     pos.x = Math.max(-bound, Math.min(bound, pos.x));
     pos.z = Math.max(-bound, Math.min(bound, pos.z));
 
-    updateHUD();
+    updateHUD(lastGroundY);
     updateMinimap();
 }
 
-function updateHUD() {
+function updateHUD(groundY = 0) {
     const pos = camera.position;
-    document.getElementById('hud-position').textContent = `X: ${pos.x.toFixed(0)} | Z: ${pos.z.toFixed(0)}`;
+    document.getElementById('hud-position').textContent = `X: ${pos.x.toFixed(0)} | Z: ${pos.z.toFixed(0)} | Ground: ${groundY.toFixed(1)}`;
     document.getElementById('hud-mode').textContent = isRunning ? '🏃 Running' : '🚶 Walking';
 }
 
