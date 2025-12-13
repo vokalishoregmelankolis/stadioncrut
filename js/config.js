@@ -1,7 +1,4 @@
-// ==========================================
 // CONFIG - Global Variables and Constants
-// ==========================================
-
 // Global scene objects
 let scene, camera, renderer;
 let orbitControls, pointerLockControls;

@@ -5,10 +5,13 @@
 
 // Initialize the stadium scene
 function init() {
-    // Scene with overcast atmosphere
+    // Optimization: Global array for objects the player can walk on
+    window.walkableObjects = [];
+
+    // Scene with Overcast Morning Atmosphere
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x8899aa); // Overcast grey
-    scene.fog = new THREE.FogExp2(0x8899aa, 0.002); // Light atmospheric fog
+    scene.background = new THREE.Color(0x7a9090); // Slightly darker overcast sky
+    // scene.fog = new THREE.FogExp2(0x050510, 0.002); // Fog handled in lighting.js
 
     // Camera
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
@@ -18,11 +21,11 @@ function init() {
     // Renderer with better settings
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
+    renderer.toneMappingExposure = 0.85; // Lower for more natural look
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.physicallyCorrectLights = true;
     document.getElementById('canvas-container').appendChild(renderer.domElement);
@@ -41,6 +44,7 @@ function init() {
     // Build scene
     setupAdvancedLighting();
     createEnvironment();
+    initFireworks(scene); // Initialize Fireworks
     createField();
     createFieldMarkings();
     createGoals();
@@ -56,6 +60,25 @@ function init() {
     setupWalkingControls();
 
     animate();
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+
+    const time = performance.now();
+    const delta = (time - prevTime) / 1000;
+
+    // Controls update
+    if (currentMode === 'orbit') {
+        orbitControls.update();
+    } else {
+        updateWalking(delta);
+    }
+
+    animateFireworks(); // Animate Fireworks
+
+    renderer.render(scene, camera);
+    prevTime = time;
 }
 
 // Start

@@ -1,6 +1,4 @@
-// ==========================================
 // UI - HUD, Minimap, and Control Buttons
-// ==========================================
 
 function updateHUD(groundY = 0) {
     const pos = camera.position;

@@ -1,6 +1,4 @@
-// ==========================================
 // PLAYERS - Player and Ball Creation
-// ==========================================
 
 function createPlayers() {
     const group = new THREE.Group();

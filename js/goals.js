@@ -1,6 +1,4 @@
-// ==========================================
 // GOALS - Football Goals with Nets
-// ==========================================
 
 function createGoals() {
     const goalW = 7.32, goalH = 2.44, goalD = 2.5;
@@ -23,7 +21,6 @@ function createGoals() {
         const goal = new THREE.Group();
         const dir = xPos > 0 ? 1 : -1;
 
-        // === FRAME ===
         // Front posts (left and right)
         const postGeo = new THREE.CylinderGeometry(postR, postR, goalH, 12);
 

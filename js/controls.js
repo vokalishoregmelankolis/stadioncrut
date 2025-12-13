@@ -1,7 +1,4 @@
-// ==========================================
 // CONTROLS - Mode Selection and Walking
-// ==========================================
-
 function setupModeSelector() {
     const orbitBtn = document.getElementById('btn-orbit-mode');
     const walkBtn = document.getElementById('btn-walk-mode');
@@ -34,6 +31,14 @@ function setupModeSelector() {
         orbitControls.enabled = true;
         camera.position.set(0, 100, 150);
         camera.lookAt(0, 0, 0);
+
+        // PERFORMANCE: Re-enable shadows and fireworks in Orbit Mode
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.needsUpdate = true;
+        window.fireworksPaused = false;
+
+        // PERFORMANCE: Restore pixel ratio
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
     });
 
     walkBtn.addEventListener('click', () => {
@@ -42,6 +47,13 @@ function setupModeSelector() {
         walkInstr.classList.remove('hidden');
         currentMode = 'walk';
         controls.classList.add('hidden');
+
+        // PERFORMANCE: Disable shadows and fireworks in Walk Mode
+        renderer.shadowMap.enabled = false;
+        window.fireworksPaused = true;
+
+        // PERFORMANCE: Lower pixel ratio for better FPS
+        renderer.setPixelRatio(1.0);
     });
 
     walkInstr.addEventListener('click', () => {
@@ -96,8 +108,15 @@ function setupWalkingControls() {
     });
 }
 
+// Frame counter for throttled raycasting
+let walkFrameCount = 0;
+let cachedGroundY = 0;
+
 function updateWalking(delta) {
     if (currentMode !== 'walk' || !pointerLockControls.isLocked) return;
+
+    // Increment frame counter
+    walkFrameCount++;
 
     velocity.x -= velocity.x * 10 * delta;
     velocity.z -= velocity.z * 10 * delta;
@@ -118,28 +137,38 @@ function updateWalking(delta) {
     const pos = pointerLockControls.getObject().position;
 
     // Raycast downward to find ground (cast from slightly above current position)
-    groundRaycaster.set(new THREE.Vector3(pos.x, pos.y + 0.5, pos.z), downDirection);
-    groundRaycaster.far = 100;
-    const intersects = groundRaycaster.intersectObjects(scene.children, true);
+    // PERFORMANCE: Only raycast every 3 frames, use cached value otherwise
+    if (walkFrameCount % 3 === 0) {
+        groundRaycaster.set(new THREE.Vector3(pos.x, pos.y + 0.5, pos.z), downDirection);
+        groundRaycaster.far = 50; // Reduced from 100
 
-    let groundY = 0; // Default ground level
-    if (intersects.length > 0) {
-        // Find the first solid ground (filter out thin objects like lines, nets)
-        for (let i = 0; i < intersects.length; i++) {
-            const hit = intersects[i];
-            // Skip very thin objects (wireframe, lines) and transparent objects
-            if (hit.object.material && hit.object.material.wireframe) continue;
-            if (hit.object.material && hit.object.material.transparent && hit.object.material.opacity < 0.5) continue;
+        // Optimize: Raycast only against walkable objects if available
+        const objectsToCheck = (window.walkableObjects && window.walkableObjects.length > 0)
+            ? window.walkableObjects
+            : scene.children;
 
-            if (hit.distance < 60) {
-                groundY = pos.y + 0.5 - hit.distance; // Adjust for ray start offset
-                break;
+        const intersects = groundRaycaster.intersectObjects(objectsToCheck, false);
+
+        let groundY = 0; // Default ground level
+        if (intersects.length > 0) {
+            // Find the first solid ground (filter out thin objects like lines, nets)
+            for (let i = 0; i < intersects.length; i++) {
+                const hit = intersects[i];
+                // Skip very thin objects (wireframe, lines) and transparent objects
+                if (hit.object.material && hit.object.material.wireframe) continue;
+                if (hit.object.material && hit.object.material.transparent && hit.object.material.opacity < 0.5) continue;
+
+                if (hit.distance < 60) {
+                    groundY = pos.y + 0.5 - hit.distance; // Adjust for ray start offset
+                    break;
+                }
             }
         }
+        cachedGroundY = groundY;
     }
 
     // Smooth ground height to prevent jitter (lerp towards detected ground)
-    lastGroundY = lastGroundY + (groundY - lastGroundY) * 0.3;
+    lastGroundY = lastGroundY + (cachedGroundY - lastGroundY) * 0.3;
 
     // Check if on ground (with small tolerance)
     const groundLevel = lastGroundY + playerHeight;

@@ -1,6 +1,4 @@
-// ==========================================
 // FIELD - Pitch and Field Markings
-// ==========================================
 
 function createField() {
     // Create procedural grass texture
@@ -46,6 +44,8 @@ function createField() {
     field.receiveShadow = true;
     scene.add(field);
 
+    if (window.walkableObjects) window.walkableObjects.push(field);
+
     // Surrounding grass area
     const surroundGeo = new THREE.PlaneGeometry(FIELD_LENGTH + 12, FIELD_WIDTH + 8);
     const surroundMat = new THREE.MeshStandardMaterial({
@@ -57,6 +57,8 @@ function createField() {
     surround.position.y = -0.02;
     surround.receiveShadow = true;
     scene.add(surround);
+
+    if (window.walkableObjects) window.walkableObjects.push(surround);
 }
 
 function createFieldMarkings() {
@@ -123,9 +125,19 @@ function createFieldMarkings() {
         ps.position.set(px - side * 11, lineH, 0);
         group.add(ps);
 
-        // Penalty arc
-        const arcGeo = new THREE.RingGeometry(9.15 - 0.06, 9.15 + 0.06, 32, 1,
-            side === 1 ? Math.PI * 0.63 : Math.PI * -0.37, Math.PI * 0.74);
+        // Penalty arc - curved line outside penalty area
+        // Arc center is at penalty spot (11m from goal line)
+        // Arc radius is 9.15m
+        // Penalty area edge is at 16.5m from goal line
+        // Distance from penalty spot to penalty area edge: 16.5 - 11 = 5.5m
+        // Arc intersects penalty area edge at angle: acos(5.5 / 9.15)
+        const distToPenEdge = penD - 11;  // 5.5m
+        const arcAngle = Math.acos(distToPenEdge / 9.15);  // angle where arc meets penalty box
+
+        // Arc from -arcAngle to +arcAngle (the part outside penalty area)
+        const arcGeo = new THREE.RingGeometry(9.15 - 0.06, 9.15 + 0.06, 48, 1,
+            side === 1 ? (Math.PI - arcAngle) : (-arcAngle),
+            arcAngle * 2);
         const arc = new THREE.Mesh(arcGeo, lineMat);
         arc.rotation.x = -Math.PI / 2;
         arc.position.set(px - side * 11, lineH, 0);
