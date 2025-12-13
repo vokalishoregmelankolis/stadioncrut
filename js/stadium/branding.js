@@ -346,7 +346,7 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
 
     theatreSignGroup.scale.set(0.8, 0.8, 0.8);
     theatreSignGroup.position.set(0, 36, -FIELD_WIDTH / 2 - 5);
-    theatreSignGroup.rotation.y = Math.PI;
+    theatreSignGroup.rotation.y = 0; // Face toward pitch (inward)
     stadium.add(theatreSignGroup);
 
     // === SIR ALEX FERGUSON STAND SIGNAGE ===
