@@ -495,7 +495,7 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
         }
     });
 
-    // === FLAGS ===
+    // === FLAGS (ANIMATED WAVING) ===
     const flagTextureLoader = new THREE.TextureLoader();
     const flagTexture = flagTextureLoader.load('assets/most of famous player in the world was dreaming to play in Manchester united.jfif');
     flagTexture.wrapS = THREE.ClampToEdgeWrapping;
@@ -512,7 +512,10 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
         { x: -FIELD_LENGTH / 2 - 5, z: FIELD_WIDTH / 2 + 5, angle: -3 * Math.PI / 4 }
     ];
 
-    flagPositions.forEach(pos => {
+    // Store flags for animation
+    window.animatedFlags = [];
+
+    flagPositions.forEach((pos, index) => {
         const flagGroup = new THREE.Group();
 
         const pole = new THREE.Mesh(
@@ -523,18 +526,24 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
         flagGroup.add(pole);
 
         const flag = new THREE.Mesh(
-            new THREE.PlaneGeometry(5, 3, 8, 4),
-            flagMat
+            new THREE.PlaneGeometry(5, 3, 16, 8), // More segments for smoother wave
+            flagMat.clone() // Clone material for each flag
         );
         flag.position.set(2.5, 10, 0);
 
-        const flagPos = flag.geometry.attributes.position;
-        for (let i = 0; i < flagPos.count; i++) {
-            const x = flagPos.getX(i);
-            flagPos.setZ(i, Math.sin(x * 0.8) * 0.4);
+        // Store original positions for animation
+        const positions = flag.geometry.attributes.position;
+        const originalZ = new Float32Array(positions.count);
+        for (let i = 0; i < positions.count; i++) {
+            originalZ[i] = positions.getZ(i);
         }
-        flagPos.needsUpdate = true;
-        flag.geometry.computeVertexNormals();
+
+        // Add to animated flags array
+        window.animatedFlags.push({
+            mesh: flag,
+            originalZ: originalZ,
+            offset: index * 0.5 // Phase offset for each flag
+        });
 
         flagGroup.add(flag);
 
@@ -559,3 +568,28 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
     stretfordSign.rotation.y = Math.PI / 2;
     stadium.add(stretfordSign);
 }
+
+// Flag animation function - call this in the main animate loop
+function updateFlags(time) {
+    if (!window.animatedFlags) return;
+
+    window.animatedFlags.forEach(flagData => {
+        const positions = flagData.mesh.geometry.attributes.position;
+        const originalZ = flagData.originalZ;
+
+        for (let i = 0; i < positions.count; i++) {
+            const x = positions.getX(i);
+            const y = positions.getY(i);
+
+            // Wave animation using sine waves
+            const wave = Math.sin(x * 1.5 + time * 3 + flagData.offset) * 0.3;
+            const wave2 = Math.sin(y * 2 + time * 2) * 0.1;
+
+            positions.setZ(i, originalZ[i] + wave + wave2);
+        }
+
+        positions.needsUpdate = true;
+        flagData.mesh.geometry.computeVertexNormals();
+    });
+}
+
