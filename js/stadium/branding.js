@@ -225,10 +225,12 @@ function addStadiumBranding(stadium, FIELD_LENGTH, FIELD_WIDTH) {
 
     const homeDugout = createDugout(true);
     homeDugout.position.set(-15, 0, FIELD_WIDTH / 2 + 6);
+    homeDugout.rotation.y = Math.PI; // Face the pitch
     stadium.add(homeDugout);
 
     const awayDugout = createDugout(false);
     awayDugout.position.set(15, 0, FIELD_WIDTH / 2 + 6);
+    awayDugout.rotation.y = Math.PI; // Face the pitch
     stadium.add(awayDugout);
 
     // === STRETFORD END CLOCK ===
