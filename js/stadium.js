@@ -94,12 +94,6 @@ function createStadiumStructure() {
     westFacade.position.set(-distW - standDepth - 8, 0, 0);
     stadium.add(westFacade);
 
-    // East facade (with glass entrance)
-    const eastGlass = createGlassEntrance(50, 25);
-    eastGlass.rotation.y = -Math.PI / 2;
-    eastGlass.position.set(distE + standDepth + 15, 0, 0);
-    stadium.add(eastGlass);
-
     // --- Main Entrance (from entrance.js) ---
     const mainEntrance = createMainEntrance();
     mainEntrance.rotation.y = Math.PI / 2;
