@@ -76,6 +76,8 @@ function animate() {
     }
 
     animateFireworks(); // Animate Fireworks
+    updateFlags(time * 0.001); // Animate Flags (convert ms to seconds)
+
 
     renderer.render(scene, camera);
     prevTime = time;
